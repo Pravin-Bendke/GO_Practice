@@ -1,0 +1,23 @@
+[
+ {
+  "id": 1,
+  "name": "Pravin",
+  "email": "pravin@gmail.com",
+  "dept": "IT Dept",
+  "mobNo": 9767196869
+ },
+ {
+  "id": 2,
+  "name": "rahul",
+  "email": "rahul@gmail.com",
+  "dept": "IT Dept",
+  "mobNo": 1234567890
+ },
+ {
+  "id": 3,
+  "name": "srushti",
+  "email": "srushti@gmail.com",
+  "dept": "testing Dept",
+  "mobNo": 9876543210
+ }
+]
