@@ -10,6 +10,9 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	// logger.Info("Application started")
+	// logger.Warn("This is a warning")
+	// logger.Error("Something went wrong")
 
 	mux := http.NewServeMux()
 	//Health Handler API
