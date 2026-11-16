@@ -128,8 +128,8 @@ func (h *DepartmentHandler) ListDepartments(
 
 	companyID, err := strconv.ParseInt(
 		query.Get("company_id"),
-		10,
-		64,
+		10, //decimal value
+		64, //bit size
 	)
 
 	if err != nil {
@@ -140,8 +140,9 @@ func (h *DepartmentHandler) ListDepartments(
 		return
 	}
 
+	//default page and page record size
 	page := 1
-	pageSize := 20
+	pageSize := 10
 
 	if query.Get("page") != "" {
 

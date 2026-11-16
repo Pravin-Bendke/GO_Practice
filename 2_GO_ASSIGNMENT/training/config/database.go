@@ -10,22 +10,13 @@ import (
 
 func ConnectDB() (*sql.DB, error) {
 
-	host := os.Getenv("localhost")
-	port := os.Getenv("5432")
-	user := os.Getenv("pravin")
-	password := os.Getenv("Pravin@123")
-	dbname := os.Getenv("training_db")
+	databaseURL := os.Getenv("DATABASE_URL")
 
-	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host,
-		port,
-		user,
-		password,
-		dbname,
-	)
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL is not set")
+	}
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := sql.Open("pgx", databaseURL)
 
 	if err != nil {
 		return nil, err

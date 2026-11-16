@@ -99,8 +99,8 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 
 		search := "%" + filters.Search + "%"
 
-		query += ` AND (name ILIKE $2 OR code ILIKE $2)`
-		countQuery += ` AND (name ILIKE $2 OR code ILIKE $2)`
+		query += ` AND (name ILIKE $2 OR code ILIKE $2)`      //we use for find ENG - Engineering
+		countQuery += ` AND (name ILIKE $2 OR code ILIKE $2)` //we are use for after search found total
 
 		args = append(args, search)
 	}
@@ -117,6 +117,7 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 		return nil, 0, err
 	}
 
+	//this is allow sorting fields.
 	allowedSort := map[string]bool{
 		"id":         true,
 		"name":       true,
@@ -124,6 +125,7 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 		"created_at": true,
 	}
 
+	// this filters option we already define in ListByCompanyID because we are applying pagination sorting on list not on single record
 	sortBy := filters.SortBy
 
 	if !allowedSort[sortBy] {
@@ -148,6 +150,8 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 
 	args = append(args, filters.PageSize, offset)
 
+	//QueryContext We can use to get multiple rows data.
+	//QueryRowContext We can use to get single row data.
 	rows, err := r.DB.QueryContext(
 		ctx,
 		query,
@@ -157,7 +161,7 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 	if err != nil {
 		return nil, 0, err
 	}
-
+	//we need to close row after get data/row
 	defer rows.Close()
 
 	departments := []models.Department{}
@@ -180,7 +184,7 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 		if err != nil {
 			return nil, 0, err
 		}
-
+		//Adding in the department structure
 		departments = append(departments, department)
 	}
 

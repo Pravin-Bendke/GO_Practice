@@ -11,7 +11,7 @@ type Config struct {
 func LocalConfig() Config {
 	port := os.Getenv("APP_PORT")
 	env := os.Getenv("APP_ENV")
-	databaseURL := os.Getenv("DatabaseURL")
+	databaseURL := os.Getenv("postgres://pravin:9767@localhost:5432/training_db?sslmode=disable")
 
 	if port == "" {
 		port = "8080"

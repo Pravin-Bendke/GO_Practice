@@ -74,7 +74,7 @@ func main() {
 	db, err := config.ConnectDB()
 
 	if err != nil {
-		log.Fatal("Database connection failed:", err)
+		log.Fatal("Database connection failed :", err)
 	}
 
 	defer db.Close()
@@ -83,14 +83,10 @@ func main() {
 	departmentRepo := repository.NewDepartmentRepository(db)
 
 	// Service
-	departmentService := domain.NewDepartmentService(
-		departmentRepo,
-	)
+	departmentService := domain.NewDepartmentService(departmentRepo)
 
 	// Handler
-	departmentHandler := handler.NewDepartmentHandler(
-		departmentService,
-	)
+	departmentHandler := handler.NewDepartmentHandler(departmentService)
 
 	// Router
 	mux := http.NewServeMux()
