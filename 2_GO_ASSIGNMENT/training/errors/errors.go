@@ -25,6 +25,11 @@ var (
 	ErrDatabase = errors.New(
 		"database error",
 	)
+
+	//Authentication error
+	ErrInvalidCredentials = errors.New(
+		"invalid email or password",
+	)
 )
 
 func MapRepositoryError(err error) error {

@@ -64,11 +64,25 @@ import (
 
 	"training/config"
 	"training/handler"
+	"training/middleware"
 	"training/repository"
 	domain "training/service"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file ;", err)
+	}
+	// Load Configuration
+	cfg := config.LocalConfig()
+
+	if cfg.JWTSecret == "" {
+		log.Fatal("JWT_SECRET is not configured")
+	}
 
 	// Database Connection
 	db, err := config.ConnectDB()
@@ -79,26 +93,59 @@ func main() {
 
 	defer db.Close()
 
-	// Repository
+	log.Println("Database connected successfully")
+
+	//dept Repository
 	departmentRepo := repository.NewDepartmentRepository(db)
 
-	// Service
+	//dept Service
 	departmentService := domain.NewDepartmentService(departmentRepo)
 
-	// Handler
+	//dept Handler
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
+
+	//User Repository
+	userRepo := repository.NewUserRepository(db)
+
+	//Auth Service
+	authService := domain.NewAuthService(userRepo)
+
+	//Auth Handler
+	authHandler := handler.NewAuthHandler(
+		authService,
+		cfg,
+	)
 
 	// Router
 	mux := http.NewServeMux()
 
+	// department Api
 	mux.HandleFunc(
 		"GET /v1/training/departments",
 		departmentHandler.ListDepartments,
 	)
-
 	mux.HandleFunc(
 		"GET /v1/training/departments/{id}",
 		departmentHandler.GetDepartment,
+	)
+	// Authentication API
+	mux.HandleFunc(
+		"POST /v1/training/login",
+		authHandler.Login,
+	)
+	//current user
+	mux.Handle(
+		"GET /v1/training/me",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			http.HandlerFunc(authHandler.Me),
+		),
+	)
+	//logout
+	mux.Handle(
+		"POST /v1/training/logout",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			http.HandlerFunc(authHandler.Logout),
+		),
 	)
 
 	// Server
@@ -107,7 +154,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-
 	log.Println("Server running on port:", port)
 
 	err = http.ListenAndServe(
@@ -118,4 +164,5 @@ func main() {
 	if err != nil {
 		log.Fatal("Server failed:", err)
 	}
+
 }
