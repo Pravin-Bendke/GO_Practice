@@ -106,3 +106,91 @@ func (r *PostgresUserRepository) GetByID(
 	}
 	return &user, nil
 }
+
+func (r *PostgresUserRepository) CreateWithDepartment(
+	ctx context.Context,
+	user *models.User,
+	departmentCode string,
+) error {
+	tx, err := r.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var departmentID int64
+
+	// find active department
+	if departmentCode != "" {
+		query := `
+		SELECT id 
+		FROM training_department
+		WHERE code = $1
+		AND company_id = $2
+		AND is_active = TRUE
+		AND deleted_at IS NULL
+		`
+		err = tx.QueryRowContext(
+			ctx,
+			query,
+			departmentCode,
+			user.CompanyID,
+		).Scan(&departmentID)
+		if err != nil {
+			return err
+		}
+	}
+
+	//Create user
+	userQuery := `
+	INSERT INTO training_user (
+	company_id,
+	first_name,
+	last_name,
+	email,
+	password,
+	is_active,
+	created_at,
+	updated_at
+	)
+	VALUES ($1,$2,$3,$4,$5,TRUE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+	RETURNING id
+	`
+
+	err = tx.QueryRowContext(
+		ctx,
+		userQuery,
+		user.CompanyID,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.Password,
+	).Scan(&user.ID)
+
+	if err != nil {
+		return err
+	}
+
+	//Create user_department mapping
+
+	if departmentCode != "" {
+		mappingQuery := `
+		INSERT INTO training_user_department (
+		user_id,
+		department_id
+		)
+		VALUES ($1,$2)
+		`
+		_, err = tx.ExecContext(
+			ctx,
+			mappingQuery,
+			user.ID,
+			departmentID,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}

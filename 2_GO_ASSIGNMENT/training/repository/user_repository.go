@@ -16,4 +16,9 @@ type UserRepository interface {
 		id int64,
 		companyID int64,
 	) (*models.User, error)
+	CreateWithDepartment(
+		ctx context.Context,
+		user *models.User,
+		departmentCode string,
+	) error
 }

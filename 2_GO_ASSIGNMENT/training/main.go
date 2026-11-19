@@ -133,6 +133,13 @@ func main() {
 		"POST /v1/training/login",
 		authHandler.Login,
 	)
+
+	//Register
+	mux.HandleFunc(
+		"POST /v1/training/register",
+		authHandler.RegisterRequest,
+	)
+
 	//current user
 	mux.Handle(
 		"GET /v1/training/me",
@@ -140,6 +147,7 @@ func main() {
 			http.HandlerFunc(authHandler.Me),
 		),
 	)
+
 	//logout
 	mux.Handle(
 		"POST /v1/training/logout",

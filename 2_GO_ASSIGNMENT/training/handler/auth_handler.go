@@ -9,6 +9,7 @@ import (
 	"training/config"
 	apperrors "training/errors"
 	"training/middleware"
+	"training/models"
 	domain "training/service"
 	jwthelper "training/shared/jwt"
 	shared "training/shared/validator"
@@ -46,8 +47,12 @@ type LoginResponse struct {
 	User        LoginUser `json:"user"`
 }
 
-//Login user
+// Register Response
+type RegisterResponse struct {
+	Message string `json:"message"`
+}
 
+// Login user
 type LoginUser struct {
 	ID        int64  `json:"id"`
 	CompanyID int64  `json:"company_id"`
@@ -191,5 +196,58 @@ func (h *AuthHandler) Logout(
 	writeJSON(w, http.StatusOK, map[string]string{
 		"message": "logout successful",
 		"info":    "please remove access token from client storage",
+	})
+}
+
+func (h *AuthHandler) RegisterRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var request models.RegisterRequest
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	err := decoder.Decode(&request)
+
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+		return
+	}
+
+	request.FirstName = strings.TrimSpace(request.FirstName)
+	request.LastName = strings.TrimSpace(request.LastName)
+	request.Email = strings.TrimSpace(request.Email)
+	request.DepartmentCode = strings.TrimSpace(request.DepartmentCode)
+
+	//Call Registration Service
+	err = h.Service.Register(
+		r.Context(),
+		request,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, apperrors.ErrEmailAlreadyExists):
+			writeJSON(w, http.StatusConflict, map[string]string{
+				"error": "email already exists",
+			})
+		case errors.Is(err, apperrors.ErrInvalidRegistration):
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "invalid registration data",
+			})
+		default:
+			writeJSON(w, http.StatusInternalServerError, map[string]string{
+				"error": "internal server error",
+			})
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, RegisterResponse{
+		Message: "registration successful",
 	})
 }
