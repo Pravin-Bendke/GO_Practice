@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"training/models"
 )
@@ -19,6 +20,141 @@ func NewDepartmentRepository(
 		DB: db,
 	}
 }
+func (r *PostgresDepartmentRepository) Create(
+	ctx context.Context,
+	department *models.Department,
+) (*models.Department, error) {
+	query := `
+	INSERT INTO training_department (
+	company_id,
+	code,
+	name,
+	description
+	)
+	VALUES ($1,$2,$3,$4)
+	RETURNING
+	id,
+	company_id,
+	code,
+	name,
+	COALESCE(description,''),
+	is_active,
+	created_at,
+	updated_at 
+	`
+	var created models.Department
+
+	err := r.DB.QueryRowContext(
+		ctx,
+		query,
+		department.CompanyID,
+		department.Code,
+		department.Name,
+		department.Description,
+	).Scan(
+		&created.ID,
+		&created.CompanyID,
+		&created.Code,
+		&created.Name,
+		&created.Description,
+		&created.IsActive,
+		&created.CreatedAt,
+		&created.UpdatedAt,
+	)
+	if err != nil {
+		log.Printf("Department repository Create failed : %v", err)
+		return nil, err
+	}
+	return &created, nil
+}
+
+func (r *PostgresDepartmentRepository) Update(
+	ctx context.Context,
+	department *models.Department,
+) (*models.Department, error) {
+	query :=
+		`UPDATE training_department
+	SET 
+	code =$1,
+	name =$2,
+	description =$3,
+	updated_at = CURRENT_TIMESTAMP
+	WHERE id = $4
+	AND company_id = $5
+	AND deleted_at IS NULL
+	RETURNING
+	id,
+	company_id,
+	code,
+	name,
+	COALESCE(description,''),
+	is_active,
+	created_at,
+	updated_at
+	`
+
+	var updated models.Department
+
+	err := r.DB.QueryRowContext(
+		ctx,
+		query,
+		department.Code,
+		department.Name,
+		department.Description,
+		department.ID,
+		department.CompanyID,
+	).Scan(
+		&updated.ID,
+		&updated.CompanyID,
+		&updated.Code,
+		&updated.Name,
+		&updated.Description,
+		&updated.IsActive,
+		&updated.CreatedAt,
+		&updated.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+// Delete
+func (r *PostgresDepartmentRepository) Delete(
+	ctx context.Context,
+	id int64,
+	companyID int64,
+) error {
+	query := `
+	UPDATE training_department
+	SET deleted_at = CURRENT_TIMESTAMP
+	WHERE id = $1
+	AND company_id =$2
+	AND deleted_at IS NULL
+	`
+	result, err := r.DB.ExecContext(
+		ctx,
+		query,
+		id,
+		companyID,
+	)
+	if err != nil {
+		log.Printf("Department repository Delete failed: %v: ", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (r *PostgresDepartmentRepository) GetByID(
 	ctx context.Context,
 	id int64,

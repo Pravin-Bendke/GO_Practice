@@ -14,6 +14,7 @@ func GenerateToken(
 	userID int64,
 	companyID int64,
 	email string,
+	role string,
 ) (string, error) {
 	if cfg.JWTSecret == "" {
 		return "", errors.New("JWT secret is not configured")
@@ -24,10 +25,10 @@ func GenerateToken(
 		UserID:    userID,
 		CompanyID: companyID,
 		Email:     email,
+		Role:      role,
 
 		RegisteredClaims: jwtlib.RegisteredClaims{
 			IssuedAt: jwtlib.NewNumericDate(now),
-
 			ExpiresAt: jwtlib.NewNumericDate(
 				now.Add(cfg.JWTExpiry),
 			),

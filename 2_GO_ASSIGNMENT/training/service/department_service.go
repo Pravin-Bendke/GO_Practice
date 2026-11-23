@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	apperrors "training/errors"
 	"training/models"
@@ -75,4 +77,105 @@ func (s *DepartmentService) ListDepartments(
 	}
 
 	return departments, total, nil
+}
+
+func (s *DepartmentService) CreateDepartment(
+	ctx context.Context,
+	department *models.Department,
+) (*models.Department, error) {
+	if department == nil {
+		return nil, errors.New("department required")
+	}
+	if department.CompanyID <= 0 {
+		return nil, apperrors.ErrInvalidCompany
+	}
+
+	department.Code = strings.TrimSpace(department.Code)
+	department.Name = strings.TrimSpace(department.Name)
+	department.Description = strings.TrimSpace(department.Description)
+
+	if department.Code == "" {
+		return nil, errors.New("department code is required")
+	}
+
+	if department.Name == "" {
+		return nil, errors.New("department is required")
+	}
+
+	created, err := s.Repository.Create(
+		ctx,
+		department,
+	)
+
+	if err != nil {
+		return nil, apperrors.MapRepositoryError(err)
+	}
+	return created, nil
+
+}
+
+func (s *DepartmentService) UpdateDepartment(
+	ctx context.Context,
+	id int64,
+	companyID int64,
+	req models.UpdateDepartmentRequest,
+) (*models.Department, error) {
+
+	if id <= 0 {
+		return nil, apperrors.ErrInvalidDepartmentID
+	}
+
+	if companyID <= 0 {
+		return nil, apperrors.ErrInvalidCompany
+	}
+
+	req.Code = strings.TrimSpace(req.Code)
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+
+	if req.Code == "" {
+		return nil, errors.New("department code is required")
+	}
+
+	if req.Name == "" {
+		return nil, errors.New("department name is required")
+	}
+	department := &models.Department{
+		ID:          id,
+		CompanyID:   companyID,
+		Code:        req.Code,
+		Name:        req.Name,
+		Description: req.Description,
+	}
+	updated, err := s.Repository.Update(ctx, department)
+
+	if err != nil {
+		return nil, apperrors.MapRepositoryError(err)
+	}
+	return updated, nil
+}
+
+func (s *DepartmentService) DeleteDepartment(
+	ctx context.Context,
+	id int64,
+	companyID int64,
+) error {
+	if id <= 0 {
+		return apperrors.ErrInvalidDepartmentID
+	}
+
+	if companyID <= 0 {
+		return apperrors.ErrInvalidCompany
+	}
+
+	err := s.Repository.Delete(
+		ctx,
+		id,
+		companyID,
+	)
+
+	if err != nil {
+		return apperrors.MapRepositoryError(err)
+	}
+	return nil
 }

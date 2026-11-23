@@ -9,7 +9,7 @@ CREATE TABLE training_user_department(
 
     CONSTRAINT fk_department
     FOREIGN KEY (department_id)
-    REFERENCES training_department(id)
+    REFERENCES training_department(id),
 
     CONSTRAINT unique_user_department
     UNIQUE (user_id,department_id)

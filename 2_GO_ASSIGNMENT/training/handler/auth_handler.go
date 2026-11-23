@@ -114,6 +114,7 @@ func (h *AuthHandler) Login(
 		user.ID,
 		user.CompanyID,
 		user.Email,
+		user.Role,
 	)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{

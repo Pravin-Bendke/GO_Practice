@@ -30,6 +30,7 @@ func (r *PostgresUserRepository) GetByEmail(
 	email,
 	password,
 	is_active,
+	role,
 	created_at,
 	updated_at,
 	deleted_at
@@ -51,6 +52,7 @@ func (r *PostgresUserRepository) GetByEmail(
 		&user.Email,
 		&user.Password,
 		&user.IsActive,
+		&user.Role,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 		&user.DeletedAt,
@@ -73,6 +75,7 @@ func (r *PostgresUserRepository) GetByID(
 	first_name,
 	last_name,
 	email,
+	role,
 	is_active,
 	created_at,
 	updated_at,
@@ -96,6 +99,7 @@ func (r *PostgresUserRepository) GetByID(
 		&user.FirstName,
 		&user.LastName,
 		&user.Email,
+		&user.Role,
 		&user.IsActive,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -154,7 +158,7 @@ func (r *PostgresUserRepository) CreateWithDepartment(
 	updated_at
 	)
 	VALUES ($1,$2,$3,$4,$5,TRUE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-	RETURNING id
+	RETURNING id,role
 	`
 
 	err = tx.QueryRowContext(
@@ -165,7 +169,7 @@ func (r *PostgresUserRepository) CreateWithDepartment(
 		user.LastName,
 		user.Email,
 		user.Password,
-	).Scan(&user.ID)
+	).Scan(&user.ID, &user.Role)
 
 	if err != nil {
 		return err

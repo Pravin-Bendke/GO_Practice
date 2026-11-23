@@ -120,14 +120,55 @@ func main() {
 	mux := http.NewServeMux()
 
 	// department Api
-	mux.HandleFunc(
+	mux.Handle(
 		"GET /v1/training/departments",
-		departmentHandler.ListDepartments,
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER", "USER")(
+				http.HandlerFunc(departmentHandler.ListDepartments),
+			),
+		),
 	)
-	mux.HandleFunc(
-		"GET /v1/training/departments/{id}",
-		departmentHandler.GetDepartment,
+
+	// Get Single Department
+	mux.Handle(
+		"GET /v1/training/department/{id}",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER", "USER")(
+				http.HandlerFunc(departmentHandler.GetDepartment),
+			),
+		),
 	)
+
+	//Create Department
+	mux.Handle(
+		"POST /v1/training/departments",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER")(
+				http.HandlerFunc(departmentHandler.CreateDepartment),
+			),
+		),
+	)
+
+	//Update Department
+	mux.Handle(
+		"PUT /v1/training/departments/{id}",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER")(
+				http.HandlerFunc(departmentHandler.UpdateDepartment),
+			),
+		),
+	)
+
+	// Delete Department
+	mux.Handle(
+		"DELETE /v1/training/departments/{id}",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER")(
+				http.HandlerFunc(departmentHandler.DeleteDepartment),
+			),
+		),
+	)
+
 	// Authentication API
 	mux.HandleFunc(
 		"POST /v1/training/login",

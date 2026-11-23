@@ -14,6 +14,22 @@ type QueryFilters struct {
 }
 
 type DepartmentRepository interface {
+	Create(
+		ctx context.Context,
+		department *models.Department,
+	) (*models.Department, error)
+
+	Update(
+		ctx context.Context,
+		department *models.Department,
+	) (*models.Department, error)
+
+	Delete(
+		ctx context.Context,
+		id int64,
+		companyID int64,
+	) error
+
 	GetByID(
 		ctx context.Context,
 		id int64,
