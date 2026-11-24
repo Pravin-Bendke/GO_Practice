@@ -38,6 +38,9 @@ var (
 	ErrInvalidRegistration = errors.New(
 		"invalid registration data",
 	)
+	ErrDepartmentHasActiveUsers = errors.New(
+		"cannot delete department because active users are assigned",
+	)
 )
 
 func MapRepositoryError(err error) error {

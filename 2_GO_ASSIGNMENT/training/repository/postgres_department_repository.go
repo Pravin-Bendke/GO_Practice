@@ -119,6 +119,47 @@ func (r *PostgresDepartmentRepository) Update(
 	return &updated, nil
 }
 
+// Update Status
+func (r *PostgresDepartmentRepository) UpdateStatus(
+	ctx context.Context,
+	id int64,
+	companyID int64,
+	isActive bool,
+) error {
+	query := `
+
+	UPDATE training_department
+	SET 
+		is_active = $1,
+		updated_at = CURRENT_TIMESTAMP
+	WHERE id = $2
+	AND company_id = $3
+	AND deleted_at IS NULL
+	`
+	result, err := r.DB.ExecContext(
+		ctx,
+		query,
+		isActive,
+		id,
+		companyID,
+	)
+	if err != nil {
+		log.Printf("Department repository Updatestatus failed :%v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 // Delete
 func (r *PostgresDepartmentRepository) Delete(
 	ctx context.Context,
@@ -329,4 +370,48 @@ func (r *PostgresDepartmentRepository) ListByCompanyID(
 	}
 
 	return departments, total, nil
+}
+
+func (r *PostgresDepartmentRepository) HasActiveUser(
+	ctx context.Context,
+	departmentID int64,
+	companyID int64,
+) (bool, error) {
+	query :=
+		`
+	SELECT EXISTS(
+	SELECT 1
+	FROM training_user_department tud
+	INNER JOIN training_user tu 
+		ON tu.id = tud.user_id 
+	INNER JOIN training_department td
+		ON td.id = tud.department_id
+	WHERE tud.department_id = $1
+		AND tu.company_id = $2
+		AND td.company_id = $2
+		AND tu.is_active = TRUE
+		AND tu.deleted_at IS NULL 
+		AND td.deleted_at IS NULL
+)
+	`
+	var exists bool
+
+	err := r.DB.QueryRowContext(
+		ctx,
+		query,
+		departmentID,
+		companyID,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+	log.Printf(
+		"HasActiveUser check: departmentID=%d companyID=%d exists=%t",
+		departmentID,
+		companyID,
+		exists,
+	)
+	return exists, nil
+
 }

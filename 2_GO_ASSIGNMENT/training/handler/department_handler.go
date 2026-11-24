@@ -56,6 +56,12 @@ func handleDepartmentError(
 			"error": err.Error(),
 		})
 
+	case errors.Is(err, apperrors.ErrDepartmentHasActiveUsers):
+
+		writeJSON(w, http.StatusConflict, map[string]string{
+			"error": err.Error(),
+		})
+
 	case errors.Is(err, apperrors.ErrInvalidCompany),
 		errors.Is(err, apperrors.ErrInvalidDepartmentID),
 		errors.Is(err, apperrors.ErrInvalidPagination):
@@ -355,6 +361,85 @@ func (h *DepartmentHandler) UpdateDepartment(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, updated)
 }
 
+func (h *DepartmentHandler) UpdateDepartmentStatus(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	//Get dept ID from URL
+
+	id, err := strconv.ParseInt(
+		r.PathValue("id"),
+		10, 64,
+	)
+
+	if err != nil || id <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid dept ID",
+		})
+		return
+	}
+	var req struct {
+		IsActive *bool `json:"is_active"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+
+	if err != nil || req.IsActive == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "is_active is required and must be boolean",
+		})
+		return
+	}
+	claims, ok := middleware.GetClaims(r.Context())
+
+	if !ok || claims == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "authentication required",
+		})
+		return
+	}
+
+	companyID := claims.CompanyID
+
+	if companyID <= 0 {
+		handleDepartmentError(
+			w,
+			apperrors.ErrInvalidCompany,
+		)
+		return
+	}
+
+	err = h.Service.UpdateStatus(
+		r.Context(),
+		id,
+		companyID,
+		*req.IsActive,
+	)
+	if err != nil {
+		handleDepartmentError(w, err)
+		return
+	}
+
+	// Success Response
+	message := "department deactivated successfully"
+
+	if *req.IsActive {
+		message = "department activated successfully"
+	}
+
+	response := map[string]interface{}{
+		"message":   message,
+		"is_active": *req.IsActive,
+	}
+
+	writeJSON(
+		w,
+		http.StatusOK,
+		response,
+	)
+
+}
+
 func (h *DepartmentHandler) DeleteDepartment(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -386,6 +471,13 @@ func (h *DepartmentHandler) DeleteDepartment(
 
 	companyID := claims.CompanyID
 
+	log.Printf(
+		"DELETE DEBUG: DepartmentID=%d, CompanyID=%d, UserID=%d",
+		id,
+		companyID,
+		claims.UserID,
+	)
+
 	if companyID <= 0 {
 		handleDepartmentError(
 			w,
@@ -393,7 +485,7 @@ func (h *DepartmentHandler) DeleteDepartment(
 		)
 		return
 	}
-
+	log.Println("DELETE DEBUG: Calling DeleteDepartment service")
 	//call service
 	err = h.Service.DeleteDepartment(
 		r.Context(),
@@ -401,6 +493,7 @@ func (h *DepartmentHandler) DeleteDepartment(
 		companyID,
 	)
 	if err != nil {
+		log.Printf("DELETE SERVICE ERROR: %v", err)
 		handleDepartmentError(w, err)
 		return
 	}

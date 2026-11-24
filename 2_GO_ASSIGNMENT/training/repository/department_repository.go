@@ -24,6 +24,13 @@ type DepartmentRepository interface {
 		department *models.Department,
 	) (*models.Department, error)
 
+	UpdateStatus(
+		ctx context.Context,
+		id int64,
+		companyID int64,
+		isActive bool,
+	) error
+
 	Delete(
 		ctx context.Context,
 		id int64,
@@ -41,4 +48,10 @@ type DepartmentRepository interface {
 		companyID int64,
 		filters QueryFilters,
 	) ([]models.Department, int64, error)
+
+	HasActiveUser(
+		ctx context.Context,
+		departmentID int64,
+		companyID int64,
+	) (bool, error)
 }

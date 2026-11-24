@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
 
 	apperrors "training/errors"
@@ -155,6 +156,33 @@ func (s *DepartmentService) UpdateDepartment(
 	return updated, nil
 }
 
+func (s *DepartmentService) UpdateStatus(
+	ctx context.Context,
+	id int64,
+	companyID int64,
+	isActive bool,
+) error {
+	if id <= 0 {
+		return apperrors.ErrInvalidDepartmentID
+	}
+
+	if companyID <= 0 {
+		return apperrors.ErrInvalidCompany
+	}
+
+	err := s.Repository.UpdateStatus(
+		ctx,
+		id,
+		companyID,
+		isActive,
+	)
+
+	if err != nil {
+		return apperrors.MapRepositoryError(err)
+	}
+	return nil
+}
+
 func (s *DepartmentService) DeleteDepartment(
 	ctx context.Context,
 	id int64,
@@ -168,7 +196,33 @@ func (s *DepartmentService) DeleteDepartment(
 		return apperrors.ErrInvalidCompany
 	}
 
-	err := s.Repository.Delete(
+	log.Printf(
+		"DeleteDepartment called: id=%d companyID=%d",
+		id,
+		companyID,
+	)
+
+	hasActiveUsers, err := s.Repository.HasActiveUser(
+		ctx,
+		id,
+		companyID,
+	)
+
+	if err != nil {
+		return apperrors.MapRepositoryError(err)
+	}
+
+	log.Printf(
+		"Active users found: %t",
+		hasActiveUsers,
+	)
+
+	if hasActiveUsers {
+		log.Println("Department deletion blocked")
+		return apperrors.ErrDepartmentHasActiveUsers
+	}
+
+	err = s.Repository.Delete(
 		ctx,
 		id,
 		companyID,

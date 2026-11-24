@@ -110,6 +110,7 @@ func main() {
 	//Auth Service
 	authService := domain.NewAuthService(userRepo)
 
+	userHandler := handler.NewUserHandler(authService)
 	//Auth Handler
 	authHandler := handler.NewAuthHandler(
 		authService,
@@ -118,6 +119,15 @@ func main() {
 
 	// Router
 	mux := http.NewServeMux()
+
+	//Get User By ID
+
+	mux.Handle(
+		"GET /v1/training/users/{id}",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			http.HandlerFunc(userHandler.GetUserByID),
+		),
+	)
 
 	// department Api
 	mux.Handle(
@@ -143,7 +153,7 @@ func main() {
 	mux.Handle(
 		"POST /v1/training/departments",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER")(
+			middleware.RequireRole("ADMIN")(
 				http.HandlerFunc(departmentHandler.CreateDepartment),
 			),
 		),
@@ -158,12 +168,21 @@ func main() {
 			),
 		),
 	)
+	// Update Status
+	mux.Handle(
+		"PATCH /v1/training/departments/{id}/status",
+		middleware.AuthMiddleware(cfg.JWTSecret)(
+			middleware.RequireRole("ADMIN", "MANAGER")(
+				http.HandlerFunc(departmentHandler.UpdateDepartmentStatus),
+			),
+		),
+	)
 
 	// Delete Department
 	mux.Handle(
 		"DELETE /v1/training/departments/{id}",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER")(
+			middleware.RequireRole("ADMIN")(
 				http.HandlerFunc(departmentHandler.DeleteDepartment),
 			),
 		),
