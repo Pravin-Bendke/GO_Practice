@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	apperrors "training/errors"
-	"training/middleware"
 	"training/models"
 	"training/repository"
+	reqctx "training/request"
 	domain "training/service"
 )
 
@@ -26,6 +26,25 @@ func NewDepartmentHandler(
 	return &DepartmentHandler{
 		Service: service,
 	}
+}
+
+func getRequestIdentity(r *http.Request) (
+	requestID string,
+	userID int64,
+	companyID int64,
+	ok bool,
+) {
+	ctx := r.Context()
+
+	requestID = reqctx.GetRequestID(ctx)
+	userID = reqctx.GetUserID(ctx)
+	companyID = reqctx.GetCompanyID(ctx)
+
+	if userID <= 0 || companyID <= 0 {
+		return requestID, userID, companyID, false
+	}
+
+	return requestID, userID, companyID, true
 }
 func writeJSON(
 	w http.ResponseWriter,
@@ -97,21 +116,21 @@ func (h *DepartmentHandler) GetDepartment(
 		return
 	}
 
-	claims, ok := middleware.GetClaims(r.Context())
+	requestID, userID, companyID, ok := getRequestIdentity(r)
 
-	if !ok || claims == nil {
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
 	}
 
-	companyID := claims.CompanyID
-
-	if companyID <= 0 {
-		handleDepartmentError(w, apperrors.ErrInvalidCompany)
-		return
-	}
+	log.Printf(
+		"GET DEPARTMENT: RequestID=%s UserID=%d CompanyID=%d",
+		requestID,
+		userID,
+		companyID,
+	)
 
 	department, err := h.Service.GetDepartment(
 		r.Context(),
@@ -138,21 +157,21 @@ func (h *DepartmentHandler) ListDepartments(
 
 	query := r.URL.Query()
 
-	claims, ok := middleware.GetClaims(r.Context())
+	requestID, userID, companyID, ok := getRequestIdentity(r)
 
-	if !ok || claims == nil {
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
 	}
 
-	companyID := claims.CompanyID
-
-	if companyID <= 0 {
-		handleDepartmentError(w, apperrors.ErrInvalidCompany)
-		return
-	}
+	log.Printf(
+		"LIST DEPARTMENTS: RequestID=%s UserID=%d CompanyID=%d",
+		requestID,
+		userID,
+		companyID,
+	)
 
 	//default page and page record size
 	page := 1
@@ -238,26 +257,21 @@ func (h *DepartmentHandler) CreateDepartment(
 		})
 		return
 	}
-	//get jwt claims
-	claims, ok := middleware.GetClaims(r.Context())
+	requestID, userID, companyID, ok := getRequestIdentity(r)
 
-	if !ok || claims == nil {
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
 	}
 
-	//we can get companyID from claim
-	companyID := claims.CompanyID
-
-	if companyID <= 0 {
-		handleDepartmentError(
-			w,
-			apperrors.ErrInvalidCompany,
-		)
-		return
-	}
+	log.Printf(
+		"CREATE DEPARTMENT: RequestID=%s UserID=%d CompanyID=%d",
+		requestID,
+		userID,
+		companyID,
+	)
 
 	//department model create
 
@@ -326,21 +340,23 @@ func (h *DepartmentHandler) UpdateDepartment(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	claims, ok := middleware.GetClaims(r.Context())
+	requestID, userID, companyID, ok := getRequestIdentity(r)
 
-	if !ok || claims == nil {
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
-
 	}
-	companyID := claims.CompanyID
+
 	log.Printf(
-		"UPDATE DEBUG: DepartmentID=%d, CompanyID=%d",
+		"UPDATE DEPARTMENT: RequestID=%s DepartmentID=%d UserID=%d CompanyID=%d",
+		requestID,
 		id,
+		userID,
 		companyID,
 	)
+
 	if companyID <= 0 {
 		handleDepartmentError(w, apperrors.ErrInvalidCompany)
 		return
@@ -390,24 +406,23 @@ func (h *DepartmentHandler) UpdateDepartmentStatus(
 		})
 		return
 	}
-	claims, ok := middleware.GetClaims(r.Context())
 
-	if !ok || claims == nil {
+	requestID, userID, companyID, ok := getRequestIdentity(r)
+
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
 	}
 
-	companyID := claims.CompanyID
-
-	if companyID <= 0 {
-		handleDepartmentError(
-			w,
-			apperrors.ErrInvalidCompany,
-		)
-		return
-	}
+	log.Printf(
+		"UPDATE DEPARTMENT STATUS: RequestID=%s DepartmentID=%d UserID=%d CompanyID=%d",
+		requestID,
+		id,
+		userID,
+		companyID,
+	)
 
 	err = h.Service.UpdateStatus(
 		r.Context(),
@@ -460,24 +475,22 @@ func (h *DepartmentHandler) DeleteDepartment(
 	}
 	// Get JWT Claims
 
-	claims, ok := middleware.GetClaims(r.Context())
+	requestID, userID, companyID, ok := getRequestIdentity(r)
 
-	if !ok || claims == nil {
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "authentication required",
 		})
 		return
 	}
 
-	companyID := claims.CompanyID
-
 	log.Printf(
-		"DELETE DEBUG: DepartmentID=%d, CompanyID=%d, UserID=%d",
+		"DELETE DEPARTMENT: RequestID=%s DepartmentID=%d UserID=%d CompanyID=%d",
+		requestID,
 		id,
+		userID,
 		companyID,
-		claims.UserID,
 	)
-
 	if companyID <= 0 {
 		handleDepartmentError(
 			w,

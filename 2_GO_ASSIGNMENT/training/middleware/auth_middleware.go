@@ -3,11 +3,11 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"strings"
 	"training/models"
-
-	jwtlib "github.com/golang-jwt/jwt/v5"
+	reqctx "training/request"
 )
 
 type contextKey string
@@ -45,9 +45,39 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				writeError(w, http.StatusUnauthorized, "invalid or expired token")
 				return
 			}
-			ctx := context.WithValue(r.Context(), claimsContextKey, claims)
 
-			next.ServeHTTP(w, r.WithContext(ctx))
+			ctx := context.WithValue(
+				r.Context(),
+				claimsContextKey,
+				claims,
+			)
+
+			// Validate authenticated identity.
+			if claims.UserID <= 0 || claims.CompanyID <= 0 {
+				writeError(
+					w,
+					http.StatusUnauthorized,
+					"invalid user or company information",
+				)
+				return
+			}
+
+			// Store user and company information.
+			ctx = reqctx.WithIdentity(
+				ctx,
+				reqctx.Identity{
+					UserID:    claims.UserID,
+					CompanyID: claims.CompanyID,
+					Role:      claims.Role,
+				},
+			)
+
+			// Pass updated context.
+			next.ServeHTTP(
+				w,
+				r.WithContext(ctx),
+			)
+
 		})
 	}
 }

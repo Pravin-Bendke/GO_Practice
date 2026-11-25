@@ -62,6 +62,7 @@ import (
 	"net/http"
 	"os"
 
+	"training/authorization"
 	"training/config"
 	"training/handler"
 	"training/middleware"
@@ -133,7 +134,7 @@ func main() {
 	mux.Handle(
 		"GET /v1/training/departments",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER", "USER")(
+			authorization.RequireRole("ADMIN", "MANAGER", "USER")(
 				http.HandlerFunc(departmentHandler.ListDepartments),
 			),
 		),
@@ -143,7 +144,7 @@ func main() {
 	mux.Handle(
 		"GET /v1/training/department/{id}",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER", "USER")(
+			authorization.RequireRole("ADMIN", "MANAGER", "USER")(
 				http.HandlerFunc(departmentHandler.GetDepartment),
 			),
 		),
@@ -153,7 +154,7 @@ func main() {
 	mux.Handle(
 		"POST /v1/training/departments",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN")(
+			authorization.RequireRole("ADMIN")(
 				http.HandlerFunc(departmentHandler.CreateDepartment),
 			),
 		),
@@ -163,7 +164,7 @@ func main() {
 	mux.Handle(
 		"PUT /v1/training/departments/{id}",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER")(
+			authorization.RequireRole("ADMIN", "MANAGER")(
 				http.HandlerFunc(departmentHandler.UpdateDepartment),
 			),
 		),
@@ -172,7 +173,7 @@ func main() {
 	mux.Handle(
 		"PATCH /v1/training/departments/{id}/status",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN", "MANAGER")(
+			authorization.RequireRole("ADMIN", "MANAGER")(
 				http.HandlerFunc(departmentHandler.UpdateDepartmentStatus),
 			),
 		),
@@ -182,7 +183,7 @@ func main() {
 	mux.Handle(
 		"DELETE /v1/training/departments/{id}",
 		middleware.AuthMiddleware(cfg.JWTSecret)(
-			middleware.RequireRole("ADMIN")(
+			authorization.RequireRole("ADMIN")(
 				http.HandlerFunc(departmentHandler.DeleteDepartment),
 			),
 		),
@@ -224,9 +225,11 @@ func main() {
 	}
 	log.Println("Server running on port:", port)
 
+	// Apply Request Context Middleware globally.
+	rootHandler := middleware.RequestContextMiddleware(mux)
 	err = http.ListenAndServe(
 		":"+port,
-		mux,
+		rootHandler,
 	)
 
 	if err != nil {
